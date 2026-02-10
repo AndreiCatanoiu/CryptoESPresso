@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoESPresso</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div class="grid-bg"></div>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <span class="logo-icon">&#9919;</span>
+                </div>
+                <div class="title-block">
+                    <h1>Crypto<span class="accent">ESP</span>resso</h1>
+                    <p class="subtitle">INTERACTIVE CRYPTOGRAPHY VISUALIZER</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <label for="algorithm">ALGORITHM</label>
+                <select id="algorithm">
+                    <option value="aes128" selected>AES-128</option>
+                    <option value="aes256">AES-256</option>
+                    <option value="des">DES</option>
+                    <option value="3des">3DES</option>
+                    <option value="chacha20">ChaCha20</option>
+                    <option value="sha256">SHA-256</option>
+                    <option value="sha512">SHA-512</option>
+                    <option value="md5">MD5</option>
+                    <option value="hmac_sha256">HMAC-SHA256</option>
+                    <option value="rsa">RSA</option>
+                </select>
+            </div>
+        </header>
+
+        <div class="divider"></div>
+
+        <div class="work-row">
+            <div class="input-block">
+                <label for="plaintext">INPUT</label>
+                <textarea id="plaintext" placeholder="Enter plaintext..." rows="6"></textarea>
+                <div class="char-count"><span id="char-count">0</span> chars</div>
+            </div>
+
+            <div class="process-block">
+                <div class="arrow-line top"></div>
+                <button id="process-btn" onclick="processRequest()">
+                    <span class="btn-text">CALCULATE</span>
+                    <span class="btn-loader" hidden>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </span>
+                </button>
+                <div class="arrow-line bottom"></div>
+            </div>
+
+            <div class="output-block">
+                <label>OUTPUT</label>
+                <div class="output-box" id="output-box">
+                    <span class="output-placeholder">Awaiting input...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('plaintext').addEventListener('input', function() {
+            document.getElementById('char-count').textContent = this.value.length;
+        });
+
+        async function processRequest() {
+            const text = document.getElementById('plaintext').value.trim();
+            if (!text) {
+                document.getElementById('plaintext').classList.add('error');
+                setTimeout(() => document.getElementById('plaintext').classList.remove('error'), 600);
+                return;
+            }
+
+            const algo = document.getElementById('algorithm').value;
+            const btn = document.getElementById('process-btn');
+            const btnText = btn.querySelector('.btn-text');
+            const btnLoader = btn.querySelector('.btn-loader');
+            const outputBox = document.getElementById('output-box');
+
+            btn.disabled = true;
+            btnText.hidden = true;
+            btnLoader.hidden = false;
+            document.getElementById('plaintext').disabled = true;
+            document.getElementById('algorithm').disabled = true;
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text, algorithm: algo })
+                });
+
+                const data = await response.json();
+                outputBox.innerHTML = '';
+                outputBox.textContent = data.result || 'No result returned.';
+                outputBox.classList.add('has-result');
+            } catch (err) {
+                outputBox.innerHTML = '';
+                outputBox.textContent = 'ERROR: ' + err.message;
+                outputBox.classList.add('has-result');
+            } finally {
+                btn.disabled = false;
+                btnText.hidden = false;
+                btnLoader.hidden = true;
+                document.getElementById('plaintext').disabled = false;
+                document.getElementById('algorithm').disabled = false;
+            }
+        }
+
+        document.getElementById('plaintext').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') processRequest();
+        });
+    </script>
+</body>
+</html>
