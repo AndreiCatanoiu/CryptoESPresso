@@ -5,6 +5,7 @@
 #include "esp_event.h"
 #include "nvs_flash.h"
 #include "WiFiAP.h"
+#include "HttpServer.h"
 
 static const char *TAG = "MAIN";
 
@@ -33,4 +34,6 @@ void app_main(void)
         ESP_LOGI(TAG, "Waiting for WiFi to initialize...");
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+
+    start_webserver();
 }
