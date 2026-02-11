@@ -44,7 +44,9 @@
             <div class="input-block">
                 <label for="plaintext">INPUT</label>
                 <textarea id="plaintext" placeholder="Enter plaintext..." rows="6"></textarea>
-                <div class="char-count"><span id="char-count">0</span> chars</div>
+                <div class="char-count">
+                    <span id="char-count">0</span> bytes
+                </div>
             </div>
 
             <div class="process-block">
@@ -70,55 +72,79 @@
     </div>
 
     <script>
-        document.getElementById('plaintext').addEventListener('input', function() {
-            document.getElementById('char-count').textContent = this.value.length;
+        const MAX_BUF = 1024;
+        const JSON_OVERHEAD = 64; 
+        const MAX_TEXT_BYTES = MAX_BUF - JSON_OVERHEAD;
+
+        function byteLength(str) {
+            return new TextEncoder().encode(str).length;
+        }
+
+        const textarea = document.getElementById('plaintext');
+        const counter = document.getElementById('char-count');
+
+        textarea.addEventListener('input', function () {
+            while (byteLength(this.value) > MAX_TEXT_BYTES) {
+                this.value = this.value.slice(0, -1);
+            }
+            counter.textContent = byteLength(this.value);
         });
 
         async function processRequest() {
-            const text = document.getElementById('plaintext').value.trim();
+            const text = textarea.value.trim();
             if (!text) {
-                document.getElementById('plaintext').classList.add('error');
-                setTimeout(() => document.getElementById('plaintext').classList.remove('error'), 600);
+                textarea.classList.add('error');
+                setTimeout(() => textarea.classList.remove('error'), 600);
                 return;
             }
 
             const algo = document.getElementById('algorithm').value;
+            const outputBox = document.getElementById('output-box');
+
+            const payload = JSON.stringify({
+                text: text,
+                algorithm: algo
+            });
+
+            if (byteLength(payload) >= MAX_BUF) {
+                outputBox.textContent = "Payload too large for ESP32 buffer (1024 bytes).";
+                outputBox.classList.add('has-result');
+                return;
+            }
+
             const btn = document.getElementById('process-btn');
             const btnText = btn.querySelector('.btn-text');
             const btnLoader = btn.querySelector('.btn-loader');
-            const outputBox = document.getElementById('output-box');
 
             btn.disabled = true;
             btnText.hidden = true;
             btnLoader.hidden = false;
-            document.getElementById('plaintext').disabled = true;
+            textarea.disabled = true;
             document.getElementById('algorithm').disabled = true;
 
             try {
                 const response = await fetch('/process', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text, algorithm: algo })
+                    body: payload
                 });
 
                 const data = await response.json();
-                outputBox.innerHTML = '';
                 outputBox.textContent = data.result || 'No result returned.';
                 outputBox.classList.add('has-result');
             } catch (err) {
-                outputBox.innerHTML = '';
                 outputBox.textContent = 'ERROR: ' + err.message;
                 outputBox.classList.add('has-result');
             } finally {
                 btn.disabled = false;
                 btnText.hidden = false;
                 btnLoader.hidden = true;
-                document.getElementById('plaintext').disabled = false;
+                textarea.disabled = false;
                 document.getElementById('algorithm').disabled = false;
             }
         }
 
-        document.getElementById('plaintext').addEventListener('keydown', function(e) {
+        textarea.addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 'Enter') processRequest();
         });
     </script>

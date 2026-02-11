@@ -44,7 +44,7 @@ static const httpd_uri_t css_uri = {
 
 static esp_err_t process_post_handler(httpd_req_t *req)
 {
-    char buf[512];
+    char buf[1024];
     int received = 0;
     int remaining = req->content_len;
 
