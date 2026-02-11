@@ -2,6 +2,7 @@
 #include "esp_log.h"
 #include "esp_http_server.h"
 #include "HttpServer.h"
+#include "CryptoCalculations.h"
 
 static const char *TAG = "HTTP_SERVER";
 static httpd_handle_t server = NULL;

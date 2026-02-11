@@ -1,0 +1,4 @@
+#ifndef __CRYPTOCALCULATIONS_H__
+#define __CRYPTOCALCULATIONS_H__
+
+#endif
