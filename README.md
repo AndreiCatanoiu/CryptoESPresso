@@ -29,7 +29,6 @@ The ESP32 acts as both a **Wi-Fi Access Point** and a **Web Server**, hosting an
 | 7 | **SHA-512** | Hash Function |
 | 8 | **MD5** | Legacy Hash Function |
 | 9 | **HMAC-SHA256** | Message Authentication |
-| 10 | **RSA** | Asymmetric Encryption |
 
 ---
 
