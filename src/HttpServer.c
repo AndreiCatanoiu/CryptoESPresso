@@ -3,6 +3,7 @@
 #include "esp_http_server.h"
 #include "HttpServer.h"
 #include "CryptoCalculations.h"
+#include "cJSON.h"
 
 static const char *TAG = "HTTP_SERVER";
 static httpd_handle_t server = NULL;
@@ -74,13 +75,56 @@ static esp_err_t process_post_handler(httpd_req_t *req)
 
     ESP_LOGI(TAG, "Received POST /process: %s", buf);
 
-    /*
-     * TODO: Parse JSON, run crypto, build JSON response.
-     */
-    const char *response = "{\"result\":\"placeholder — crypto not implemented yet\"}";
+    cJSON *json = cJSON_Parse(buf);
+    if (!json)
+    {
+        const char *error_ptr = cJSON_GetErrorPtr();
+        if (error_ptr)
+        {
+            ESP_LOGE(TAG, "JSON parse error near: %.20s", error_ptr);
+        }
+        else
+        {
+            ESP_LOGE(TAG, "JSON parse error");
+        }
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    cJSON *recivedInputText = cJSON_GetObjectItemCaseSensitive(json, "text");
+    cJSON *recivedAlgorithm = cJSON_GetObjectItemCaseSensitive(json, "algorithm");
+
+    if (!cJSON_IsString(recivedInputText) || !cJSON_IsString(recivedAlgorithm))
+    {
+        ESP_LOGE(TAG, "Invalid format: text or algorithm missing");
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing text or algorithm");
+        return ESP_FAIL;
+    }
+
+    const char *input_text = recivedInputText->valuestring;
+    const char *algorithm = recivedAlgorithm->valuestring;
+
+    const char *result = returnTheResult(input_text, algorithm);
+
+    cJSON *resp_json = cJSON_CreateObject();
+    if (result)
+    {
+        cJSON_AddStringToObject(resp_json, "result", result);
+    }
+    else
+    {
+        cJSON_AddStringToObject(resp_json, "result", "Unknown algorithm");
+    }
+
+    char *resp_str = cJSON_PrintUnformatted(resp_json);
 
     httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, response, strlen(response));
+    httpd_resp_send(req, resp_str, strlen(resp_str));
+
+    free(resp_str);
+    cJSON_Delete(resp_json);
+    cJSON_Delete(json);
 
     return ESP_OK;
 }
